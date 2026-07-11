@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DPE Log</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0F141B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DPE Log">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F141B;
+    --bg-grid: rgba(143,160,184,0.05);
+    --panel:#161E29;
+    --panel-2:#1D2735;
+    --line:#2B3648;
+    --line-soft:#212B3A;
+    --amber:#F0A202;
+    --amber-dim:#B97D12;
+    --amber-glow: rgba(240,162,2,0.18);
+    --text:#E7ECF3;
+    --text-dim:#8FA0B8;
+    --text-faint:#5B6B82;
+    --green:#3FA34D;
+    --green-dim: rgba(63,163,77,0.16);
+    --red:#D64545;
+    --red-dim: rgba(214,69,69,0.16);
+    --radius: 10px;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px) 0 0/28px 100%,
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:84px;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .fade-in{animation:fadeIn .25s ease both;}
+  }
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  ::selection{background:var(--amber-glow); color:var(--text);}
+  a{color:var(--amber);}
+  button{font-family:inherit;}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+
+  .wrap{max-width:920px; margin:0 auto; padding:16px;}
+
+  /* ---------- Header ---------- */
+  header.app-header{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:20;
+    background:rgba(15,20,27,0.92); backdrop-filter:blur(6px);
+  }
+  .brand{display:flex; align-items:center; gap:10px; flex:1;}
+  .brand-title{font-family:var(--mono); font-weight:700; letter-spacing:0.06em; font-size:15px;}
+  .brand-sub{font-family:var(--mono); font-size:10.5px; color:var(--text-faint); letter-spacing:0.08em; margin-top:1px;}
+  .ai-badge{width:34px;height:34px;flex:none;}
+
+  .icon-btn{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
+    border-radius:8px; padding:8px 10px; font-size:12px; font-family:var(--mono);
+    display:flex; align-items:center; gap:6px; cursor:pointer;
+  }
+  .icon-btn:hover{color:var(--text); border-color:var(--amber-dim);}
+  .dot{width:6px;height:6px;border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green);}
+
+  /* ---------- Tabs ---------- */
+  nav.tabbar{
+    display:flex; gap:8px; padding:12px 16px 0 16px; max-width:920px; margin:0 auto;
+  }
+  .tab-btn{
+    flex:1; background:var(--panel); border:1px solid var(--line); color:var(--text-dim);
+    padding:11px 8px; border-radius:8px 8px 0 0; font-family:var(--mono); font-size:11.5px;
+    letter-spacing:0.06em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;
+    border-bottom:none; position:relative; top:1px;
+  }
+  .tab-btn .led{width:6px;height:6px;border-radius:50%; background:var(--text-faint);}
+  .tab-btn.active{ background:var(--panel-2); color:var(--amber); border-color:var(--line); }
+  .tab-btn.active .led{background:var(--amber); box-shadow:0 0 6px var(--amber);}
+
+  section.panel{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:0 8px 8px 8px;
+    padding:20px 16px 24px 16px; max-width:920px; margin:0 auto 20px auto;
+  }
+  .panel-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:var(--text-faint);
+    text-transform:uppercase; margin:0 0 14px 0; display:flex; align-items:center; gap:8px;
+  }
+  .panel-title::after{content:""; flex:1; height:1px; background:var(--line);}
+
+  /* ---------- Corner screws (panel motif) ---------- */
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; position:relative;
+  }
+  .card::before, .card::after{
+    content:""; position:absolute; width:4px; height:4px; border-radius:50%;
+    background:var(--line-soft); top:8px;
+  }
+  .card::before{left:8px;} .card::after{right:8px;}
+
+  /* ---------- Forms ---------- */
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:0.08em;
+    color:var(--text-dim); text-transform:uppercase; margin-bottom:6px;
+  }
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:520px){ .field-row{grid-template-columns:1fr;} }
+
+  input[type=text], input[type=date], input[type=time], input[type=number], input[type=password], select{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text);
+    padding:11px 12px; border-radius:7px; font-size:15px; font-family:var(--sans);
+  }
+  input:focus, select:focus{border-color:var(--amber-dim);}
+  select{appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); background-position:calc(100% - 18px) center, calc(100% - 13px) center; background-size:5px 5px, 5px 5px; background-repeat:no-repeat; padding-right:34px;}
+
+  .select-row{display:flex; gap:8px;}
+  .select-row select{flex:1;}
+  .add-btn{
+    flex:none; width:42px; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--amber); border-radius:7px; font-size:18px; line-height:1; cursor:pointer;
+  }
+  .add-btn:hover{border-color:var(--amber-dim);}
+
+  .btn{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:0.05em; text-transform:uppercase;
+    padding:12px 18px; border-radius:7px; border:1px solid var(--line); background:var(--panel);
+    color:var(--text); cursor:pointer;
+  }
+  .btn-primary{ background:var(--amber); border-color:var(--amber); color:#1A1200; font-weight:700; }
+  .btn-primary:hover{ background:#ffb521; }
+  .btn-ghost{ background:transparent; }
+  .btn-danger{ color:var(--red); border-color:var(--red); background:transparent; }
+  .btn-row{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+
+  .result-pills{display:flex; gap:8px; flex-wrap:wrap;}
+  .pill{
+    flex:1; min-width:90px; text-align:center; padding:10px 8px; border-radius:7px;
+    border:1px solid var(--line); background:var(--bg); color:var(--text-dim);
+    font-family:var(--mono); font-size:12px; cursor:pointer; letter-spacing:0.04em;
+  }
+  .pill[data-r="Pass"].active{ background:var(--green-dim); border-color:var(--green); color:var(--green); }
+  .pill[data-r="Fail"].active{ background:var(--red-dim); border-color:var(--red); color:var(--red); }
+  .pill[data-r="Discontinued"].active, .pill[data-r="Retest"].active{ background:var(--amber-glow); border-color:var(--amber-dim); color:var(--amber); }
+
+  /* ---------- Lock screen ---------- */
+  .lock-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .lock-card{ width:100%; max-width:380px; text-align:center; }
+  .lock-icon{ width:64px; height:64px; margin:0 auto 18px auto; }
+  .lock-card h1{ font-family:var(--mono); font-size:16px; letter-spacing:0.1em; margin:0 0 4px 0; }
+  .lock-card p{ color:var(--text-dim); font-size:13px; margin:0 0 22px 0; line-height:1.5; }
+  .error-text{ color:var(--red); font-size:12.5px; margin-top:8px; min-height:16px; font-family:var(--mono); }
+
+  /* ---------- Log list ---------- */
+  .filters{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  @media (max-width:560px){ .filters{grid-template-columns:1fr;} }
+  .entry-card{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; padding:14px; margin-bottom:10px; }
+  .entry-main{ flex:1; min-width:0; }
+  .entry-top{ display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }
+  .badge{ font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:20px; letter-spacing:0.03em; }
+  .badge-pass{ background:var(--green-dim); color:var(--green); }
+  .badge-fail{ background:var(--red-dim); color:var(--red); }
+  .badge-other{ background:var(--amber-glow); color:var(--amber); }
+  .entry-name{ font-weight:600; font-size:14.5px; }
+  .entry-sub{ color:var(--text-dim); font-size:12.5px; font-family:var(--mono); }
+  .ftn-chip{
+    font-family:var(--mono); font-size:16px; font-weight:700; color:var(--amber);
+    background:var(--bg); border:1px solid var(--line-soft); padding:3px 9px 3px 9px;
+    border-radius:6px; cursor:pointer; letter-spacing:0.04em; user-select:all;
+    display:inline-flex; align-items:center; gap:5px; transition:background .15s, border-color .15s, color .15s;
+  }
+  .ftn-chip::after{ content:"copy"; font-size:9px; font-weight:500; color:var(--text-faint); letter-spacing:0.06em; text-transform:uppercase; }
+  .ftn-chip:hover{ border-color:var(--amber-dim); }
+  .ftn-chip:active{ transform:scale(0.97); }
+  .ftn-chip.copied{ background:var(--green-dim); border-color:var(--green); color:var(--green); }
+  .ftn-chip.copied::after{ content:"\2713"; color:var(--green); }
+  .checkbox-field{ display:flex; align-items:center; gap:10px; padding:11px 12px; background:var(--bg); border:1px solid var(--line); border-radius:7px; cursor:pointer; }
+  .checkbox-field input{ width:18px; height:18px; accent-color:var(--amber); flex:none; }
+  .checkbox-field span{ font-size:13.5px; color:var(--text); }
+
+
+  .entry-amt{ font-family:var(--mono); font-size:14px; color:var(--text); white-space:nowrap; }
+  .entry-actions{ display:flex; flex-direction:column; gap:6px; }
+  .entry-actions button{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:15px; padding:2px 4px;}
+  .entry-actions button:hover{ color:var(--amber); }
+  .empty-state{ text-align:center; padding:36px 16px; color:var(--text-faint); font-family:var(--mono); font-size:12.5px; }
+
+  /* ---------- Stats ---------- */
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(128px,1fr)); gap:10px; margin-bottom:6px; }
+  .stat-card{ padding:14px 12px; text-align:center; }
+  .stat-label{ font-family:var(--mono); font-size:9.5px; letter-spacing:0.08em; color:var(--text-faint); text-transform:uppercase; margin-bottom:6px; }
+  .stat-value{ font-family:var(--mono); font-size:19px; font-weight:600; color:var(--amber); }
+
+  .seg{ display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+  .seg button{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.04em; padding:7px 12px;
+    border-radius:20px; border:1px solid var(--line); background:var(--bg); color:var(--text-dim); cursor:pointer;
+  }
+  .seg button.active{ border-color:var(--amber); color:var(--amber); background:var(--amber-glow); }
+
+  .dial-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px 10px; }
+  .dial-counts{ display:flex; gap:18px; font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .dial-counts span.g{color:var(--green);} .dial-counts span.r{color:var(--red);}
+
+  table.breakdown{ width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px; }
+  table.breakdown th, table.breakdown td{ padding:9px 8px; text-align:left; border-bottom:1px solid var(--line-soft); white-space:nowrap; }
+  table.breakdown th{ color:var(--text-faint); font-weight:500; text-transform:uppercase; font-size:10px; letter-spacing:0.06em; }
+  table.breakdown td.rowlabel{ color:var(--text); font-weight:600; }
+  .rate-cell{ display:flex; flex-direction:column; gap:3px; min-width:64px; }
+  .rate-bar{ height:3px; border-radius:2px; background:var(--line); overflow:hidden; }
+  .rate-bar-fill{ height:100%; background:var(--green); }
+  .table-scroll{ overflow-x:auto; }
+  .no-data{ color:var(--text-faint); }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(6,9,13,0.72); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:20px; width:100%; max-width:340px; }
+  .modal-box h3{ font-family:var(--mono); font-size:13px; letter-spacing:0.05em; margin:0 0 14px 0; color:var(--text); }
+  .modal-box p{ color:var(--text-dim); font-size:13px; line-height:1.5; margin:0 0 16px 0; }
+
+  footer.app-footer{
+    max-width:920px; margin:8px auto 30px auto; padding:0 16px; text-align:center;
+    color:var(--text-faint); font-family:var(--mono); font-size:10.5px; line-height:1.7;
+  }
+  footer.app-footer .foot-actions{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK SCREEN ============ -->
+<div id="lockScreen" class="lock-wrap">
+  <div class="lock-card fade-in">
+    <svg class="lock-icon" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="29" fill="#161E29" stroke="#2B3648" stroke-width="2"/>
+      <path d="M3 32a29 29 0 0 1 58 0" fill="#2C4A63" opacity="0.5"/>
+      <line x1="3" y1="32" x2="61" y2="32" stroke="#F0A202" stroke-width="1.5"/>
+      <circle cx="32" cy="32" r="3" fill="#F0A202"/>
+      <line x1="20" y1="32" x2="26" y2="32" stroke="#F0A202" stroke-width="2"/>
+      <line x1="38" y1="32" x2="44" y2="32" stroke="#F0A202" stroke-width="2"/>
+    </svg>
+    <h1 id="lockTitle">DPE LOG</h1>
+    <p id="lockSub">Enter your passphrase to unlock your log.</p>
+    <div class="field" style="text-align:left;">
+      <label for="passInput">Passphrase</label>
+      <input type="password" id="passInput" autocomplete="off">
+    </div>
+    <div id="confirmField" class="field hidden" style="text-align:left;">
+      <label for="passConfirm">Confirm Passphrase</label>
+      <input type="password" id="passConfirm" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="unlockBtn" style="width:100%;">Unlock</button>
+    <div class="error-text" id="lockError"></div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <header class="app-header">
+    <div class="brand">
+      <svg class="ai-badge" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="29" fill="#161E29" stroke="#2B3648" stroke-width="2"/>
+        <path d="M3 32a29 29 0 0 1 58 0" fill="#2C4A63" opacity="0.5"/>
+        <line x1="3" y1="32" x2="61" y2="32" stroke="#F0A202" stroke-width="1.5"/>
+        <circle cx="32" cy="32" r="3" fill="#F0A202"/>
+        <line x1="20" y1="32" x2="26" y2="32" stroke="#F0A202" stroke-width="2"/>
+        <line x1="38" y1="32" x2="44" y2="32" stroke="#F0A202" stroke-width="2"/>
+      </svg>
+      <div>
+        <div class="brand-title">DPE LOG</div>
+        <div class="brand-sub" id="headerDate">— — —</div>
+      </div>
+    </div>
+    <button class="icon-btn" id="lockNowBtn"><span class="dot"></span>LOCK</button>
+  </header>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="entry"><span class="led"></span>NEW ENTRY</button>
+    <button class="tab-btn" data-tab="log"><span class="led"></span>LOG</button>
+    <button class="tab-btn" data-tab="stats"><span class="led"></span>STATS</button>
+  </nav>
+
+  <div class="wrap" style="padding-top:0;">
+
+    <!-- ===== NEW ENTRY TAB ===== -->
+    <section class="panel" id="tab-entry">
+      <div class="panel-title" id="entryPanelTitle">Log a Checkride</div>
+      <form id="entryForm">
+        <div class="field-row">
+          <div class="field">
+            <label for="f_date">Date</label>
+            <input type="date" id="f_date" required>
+          </div>
+          <div class="field">
+            <label for="f_time">Time of Test</label>
+            <input type="time" id="f_time">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f_applicant">Applicant Name</label>
+          <input type="text" id="f_applicant" placeholder="Full name" required>
+        </div>
+
+        <div class="field">
+          <label for="f_ftn">FTN (Flight Tracking Number)</label>
+          <input type="text" id="f_ftn" placeholder="A1234567" maxlength="8" required>
+          <div class="error-text" id="ftnError" style="min-height:14px; margin-top:4px;"></div>
+        </div>
+
+        <div class="field">
+          <label for="f_school">School</label>
+          <div class="select-row">
+            <select id="f_school" required></select>
+            <button type="button" class="add-btn" data-addlist="schools" title="Add school">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f_testtype">Type of Test</label>
+          <div class="select-row">
+            <select id="f_testtype" required></select>
+            <button type="button" class="add-btn" data-addlist="testTypes" title="Add test type">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Result</label>
+          <div class="result-pills" id="resultPills">
+            <div class="pill" data-r="Pass">PASS</div>
+            <div class="pill" data-r="Fail">FAIL</div>
+            <div class="pill" data-r="Discontinued">DISC.</div>
+            <div class="pill" data-r="Retest">RETEST</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-field">
+            <input type="checkbox" id="f_continuation">
+            <span>Continuation (resuming a previously discontinued test)</span>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f_amount">Amount Paid</label>
+            <input type="number" id="f_amount" min="0" step="0.01" placeholder="0.00" required>
+          </div>
+          <div class="field">
+            <label for="f_payment">Form of Payment</label>
+            <div class="select-row">
+              <select id="f_payment" required></select>
+              <button type="button" class="add-btn" data-addlist="paymentTypes" title="Add payment type">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="saveEntryBtn">Save Entry</button>
+          <button type="button" class="btn btn-ghost hidden" id="cancelEditBtn">Cancel Edit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===== LOG TAB ===== -->
+    <section class="panel hidden" id="tab-log">
+      <div class="panel-title">Entry Log</div>
+      <div class="filters">
+        <input type="text" id="filterSearch" placeholder="Search applicant name or FTN…">
+        <select id="filterSchool"><option value="">All Schools</option></select>
+        <select id="filterTestType"><option value="">All Test Types</option></select>
+        <div style="display:flex; gap:8px;">
+          <input type="date" id="filterFrom" title="From date">
+          <input type="date" id="filterTo" title="To date">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:-6px; margin-bottom:16px;">
+        <button class="btn btn-ghost" id="clearFiltersBtn">Clear Filters</button>
+      </div>
+      <div id="logList"></div>
+    </section>
+
+    <!-- ===== STATS TAB ===== -->
+    <section class="panel hidden" id="tab-stats">
+      <div class="panel-title">Money Collected</div>
+      <div class="stat-grid" id="moneyStats"></div>
+
+      <div class="panel-title" style="margin-top:26px;">Continuations</div>
+      <div class="stat-grid" id="continuationStats"></div>
+
+      <div class="panel-title" style="margin-top:26px;">Pass Rate — All Tests</div>
+      <div class="seg" id="pieSeg">
+        <button data-period="week">This Week</button>
+        <button data-period="month">This Month</button>
+        <button data-period="year">This Year</button>
+        <button data-period="all" class="active">All Time</button>
+      </div>
+      <div class="dial-wrap">
+        <canvas id="dialCanvas" width="220" height="220"></canvas>
+        <div class="dial-counts">
+          <span class="g" id="dialPassCount">0 Pass</span>
+          <span class="r" id="dialFailCount">0 Fail</span>
+        </div>
+      </div>
+
+      <div class="panel-title" style="margin-top:26px;">Breakdown by Test Type</div>
+      <div class="table-scroll">
+        <table class="breakdown" id="breakdownTable"></table>
+      </div>
+
+      <div class="panel-title" style="margin-top:26px;">Breakdown by School</div>
+      <div class="table-scroll">
+        <table class="breakdown" id="breakdownBySchool"></table>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="app-footer">
+    Data is encrypted on this device and never leaves your browser.
+    <div class="foot-actions">
+      <button class="icon-btn" id="exportBtn">Export Backup</button>
+      <button class="icon-btn" id="importBtn">Import Backup</button>
+      <button class="icon-btn" id="changePassBtn">Change Passphrase</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" class="hidden">
+  </footer>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Constants ---------------- */
+  var STORAGE_KEY = 'dpeLogVault';
+  var PBKDF2_ITER = 250000;
+
+  var DEFAULT_LISTS = {
+    schools: ['CSA','BLITZ','ATP','FLT','SCUD','USU','PHOENIX','PLATINUM','GLIDEPATH','CENTERLINE','AXIOM'],
+    testTypes: ['Private','Instrument','Commercial','CMEL','CFII','CFMEI'],
+    paymentTypes: ['Cash','Check','Venmo']
+  };
+
+  /* ---------------- State ---------------- */
+  var currentPassphrase = null;
+  var state = null; // { entries: [], lists: {schools,testTypes,paymentTypes} }
+  var editingId = null;
+  var selectedResult = null;
+  var pieePeriod = 'all';
+  var filters = { search:'', school:'', testType:'', from:'', to:'' };
+
+  /* ---------------- Utility ---------------- */
+  function uid(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function fmtMoney(n){
+    return (n||0).toLocaleString('en-US', {style:'currency', currency:'USD'});
+  }
+  function fmtDateHeader(){
+    var d = new Date();
+    return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'}).toUpperCase();
+  }
+  function b64(buf){
+    var bytes = new Uint8Array(buf), bin = '';
+    for (var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function unb64(str){
+    var bin = atob(str), bytes = new Uint8Array(bin.length);
+    for (var i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  /* ---------------- Crypto ---------------- */
+  function deriveKey(passphrase, saltBuf){
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(passphrase), {name:'PBKDF2'}, false, ['deriveKey'])
+      .then(function(keyMaterial){
+        return crypto.subtle.deriveKey(
+          {name:'PBKDF2', salt: saltBuf, iterations: PBKDF2_ITER, hash:'SHA-256'},
+          keyMaterial,
+          {name:'AES-GCM', length:256},
+          false,
+          ['encrypt','decrypt']
+        );
+      });
+  }
+
+  function encryptState(passphrase, obj){
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return deriveKey(passphrase, salt).then(function(key){
+      var enc = new TextEncoder().encode(JSON.stringify(obj));
+      return crypto.subtle.encrypt({name:'AES-GCM', iv:iv}, key, enc).then(function(cipher){
+        return { v:1, salt:b64(salt), iv:b64(iv), data:b64(cipher) };
+      });
+    });
+  }
+
+  function decryptState(passphrase, vault){
+    var salt = new Uint8Array(unb64(vault.salt));
+    var iv = new Uint8Array(unb64(vault.iv));
+    return deriveKey(passphrase, salt).then(function(key){
+      return crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, key, unb64(vault.data)).then(function(plain){
+        return JSON.parse(new TextDecoder().decode(plain));
+      });
+    });
+  }
+
+  function saveVault(){
+    if (!currentPassphrase || !state) return Promise.resolve();
+    return encryptState(currentPassphrase, state).then(function(vault){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(vault));
+    });
+  }
+
+  /* ---------------- Modal ---------------- */
+  var modalOverlay = document.getElementById('modalOverlay');
+  var modalBox = document.getElementById('modalBox');
+  function closeModal(){ modalOverlay.classList.remove('show'); modalBox.innerHTML=''; }
+  function openAddListModal(listKey, selectEl){
+    var labelMap = {schools:'School', testTypes:'Test Type', paymentTypes:'Payment Type'};
+    modalBox.innerHTML =
+      '<h3>Add ' + labelMap[listKey] + '</h3>' +
+      '<div class="field"><input type="text" id="modalInput" placeholder="' + labelMap[listKey] + ' name"></div>' +
+      '<div class="btn-row"><button class="btn btn-primary" id="modalSave">Add</button>' +
+      '<button class="btn btn-ghost" id="modalCancel">Cancel</button></div>';
+    modalOverlay.classList.add('show');
+    var input = document.getElementById('modalInput');
+    input.focus();
+    document.getElementById('modalCancel').onclick = closeModal;
+    function commit(){
+      var val = input.value.trim();
+      if (!val) return;
+      var exists = state.lists[listKey].some(function(x){ return x.toLowerCase()===val.toLowerCase(); });
+      if (!exists) state.lists[listKey].push(val);
+      saveVault().then(function(){
+        renderAllSelectLists();
+        if (selectEl) selectEl.value = val;
+        renderStats();
+        closeModal();
+      });
+    }
+    document.getElementById('modalSave').onclick = commit;
+    input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); commit(); } });
+  }
+  function openConfirmModal(title, msg, onConfirm){
+    modalBox.innerHTML =
+      '<h3>' + title + '</h3><p>' + msg + '</p>' +
+      '<div class="btn-row"><button class="btn btn-danger" id="modalConfirm">Confirm</button>' +
+      '<button class="btn btn-ghost" id="modalCancel2">Cancel</button></div>';
+    modalOverlay.classList.add('show');
+    document.getElementById('modalCancel2').onclick = closeModal;
+    document.getElementById('modalConfirm').onclick = function(){ closeModal(); onConfirm(); };
+  }
+  function openChangePassModal(){
+    modalBox.innerHTML =
+      '<h3>Change Passphrase</h3>' +
+      '<div class="field"><label>New Passphrase</label><input type="password" id="newPass1"></div>' +
+      '<div class="field"><label>Confirm New Passphrase</label><input type="password" id="newPass2"></div>' +
+      '<div class="error-text" id="cpError"></div>' +
+      '<div class="btn-row"><button class="btn btn-primary" id="cpSave">Save</button>' +
+      '<button class="btn btn-ghost" id="cpCancel">Cancel</button></div>';
+    modalOverlay.classList.add('show');
+    document.getElementById('cpCancel').onclick = closeModal;
+    document.getElementById('cpSave').onclick = function(){
+      var p1 = document.getElementById('newPass1').value;
+      var p2 = document.getElementById('newPass2').value;
+      var err = document.getElementById('cpError');
+      if (p1.length < 4){ err.textContent = 'Passphrase must be at least 4 characters.'; return; }
+      if (p1 !== p2){ err.textContent = 'Passphrases do not match.'; return; }
+      currentPassphrase = p1;
+      saveVault().then(closeModal);
+    };
+  }
+  function openExportModal(){
+    var raw = localStorage.getItem(STORAGE_KEY);
+    var blob = new Blob([raw], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'dpe-log-backup-' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ---------------- Lock / Unlock ---------------- */
+  var lockScreen = document.getElementById('lockScreen');
+  var appEl = document.getElementById('app');
+  var passInput = document.getElementById('passInput');
+  var passConfirm = document.getElementById('passConfirm');
+  var confirmField = document.getElementById('confirmField');
+  var lockError = document.getElementById('lockError');
+  var lockTitle = document.getElementById('lockTitle');
+  var lockSub = document.getElementById('lockSub');
+
+  function isFirstRun(){ return localStorage.getItem(STORAGE_KEY) === null; }
+
+  function showLock(){
+    appEl.classList.add('hidden');
+    lockScreen.classList.remove('hidden');
+    passInput.value=''; if(passConfirm) passConfirm.value='';
+    lockError.textContent='';
+    if (isFirstRun()){
+      lockTitle.textContent = 'CREATE PASSPHRASE';
+      lockSub.textContent = 'This protects your log with on-device encryption. There is no way to recover it if forgotten — store it somewhere safe.';
+      confirmField.classList.remove('hidden');
+    } else {
+      lockTitle.textContent = 'DPE LOG';
+      lockSub.textContent = 'Enter your passphrase to unlock your log.';
+      confirmField.classList.add('hidden');
+    }
+    passInput.focus();
+  }
+
+  function unlockFlow(){
+    var p = passInput.value;
+    if (!p){ lockError.textContent = 'Enter a passphrase.'; return; }
+    if (isFirstRun()){
+      var c = passConfirm.value;
+      if (p.length < 4){ lockError.textContent = 'Use at least 4 characters.'; return; }
+      if (p !== c){ lockError.textContent = 'Passphrases do not match.'; return; }
+      currentPassphrase = p;
+      state = { entries: [], lists: JSON.parse(JSON.stringify(DEFAULT_LISTS)) };
+      saveVault().then(function(){ enterApp(); });
+    } else {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var vault;
+      try { vault = JSON.parse(raw); } catch(e){ lockError.textContent = 'Stored data is corrupted.'; return; }
+      decryptState(p, vault).then(function(obj){
+        currentPassphrase = p;
+        state = obj;
+        if (!state.lists) state.lists = JSON.parse(JSON.stringify(DEFAULT_LISTS));
+        enterApp();
+      }).catch(function(){
+        lockError.textContent = 'Incorrect passphrase. Try again.';
+      });
+    }
+  }
+
+  document.getElementById('unlockBtn').addEventListener('click', unlockFlow);
+  passInput.addEventListener('keydown', function(e){ if(e.key==='Enter') unlockFlow(); });
+  passConfirm.addEventListener('keydown', function(e){ if(e.key==='Enter') unlockFlow(); });
+
+  document.getElementById('lockNowBtn').addEventListener('click', function(){
+    currentPassphrase = null;
+    state = null;
+    editingId = null;
+    appEl.classList.add('hidden');
+    showLock();
+  });
+
+  function enterApp(){
+    lockScreen.classList.add('hidden');
+    appEl.classList.remove('hidden');
+    document.getElementById('headerDate').textContent = fmtDateHeader();
+    if (state.lists && state.lists.testTypes){
+      state.lists.testTypes = state.lists.testTypes.filter(function(t){ return t !== 'Continuation'; });
+    }
+    resetEntryForm();
+    renderAllSelectLists();
+    renderLog();
+    renderStats();
+  }
+
+  /* ---------------- Tabs ---------------- */
+  var tabButtons = document.querySelectorAll('.tab-btn');
+  tabButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabButtons.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      ['entry','log','stats'].forEach(function(t){
+        document.getElementById('tab-'+t).classList.toggle('hidden', t !== btn.dataset.tab);
+      });
+      if (btn.dataset.tab === 'log') renderLog();
+      if (btn.dataset.tab === 'stats') renderStats();
+    });
+  });
+
+  /* ---------------- Select lists ---------------- */
+  function renderAllSelectLists(){
+    fillSelect(document.getElementById('f_school'), state.lists.schools);
+    fillSelect(document.getElementById('f_testtype'), state.lists.testTypes);
+    fillSelect(document.getElementById('f_payment'), state.lists.paymentTypes);
+    fillSelect(document.getElementById('filterSchool'), state.lists.schools, true, 'All Schools');
+    fillSelect(document.getElementById('filterTestType'), state.lists.testTypes, true, 'All Test Types');
+  }
+  function fillSelect(sel, items, withAll, allLabel){
+    var current = sel.value;
+    sel.innerHTML = '';
+    if (withAll){
+      var optAll = document.createElement('option');
+      optAll.value = ''; optAll.textContent = allLabel;
+      sel.appendChild(optAll);
+    }
+    items.forEach(function(item){
+      var opt = document.createElement('option');
+      opt.value = item; opt.textContent = item;
+      sel.appendChild(opt);
+    });
+    if (items.indexOf(current) !== -1 || (withAll && current==='')) sel.value = current;
+  }
+
+  document.querySelectorAll('[data-addlist]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var key = btn.dataset.addlist;
+      var selId = key==='schools' ? 'f_school' : (key==='testTypes' ? 'f_testtype' : 'f_payment');
+      openAddListModal(key, document.getElementById(selId));
+    });
+  });
+
+  /* ---------------- Result pills ---------------- */
+  var FTN_PATTERN = /^[AC]\d{7}$/;
+  var ftnInput = document.getElementById('f_ftn');
+  ftnInput.addEventListener('input', function(){
+    ftnInput.value = ftnInput.value.toUpperCase();
+    var err = document.getElementById('ftnError');
+    if (ftnInput.value && !FTN_PATTERN.test(ftnInput.value)){
+      err.textContent = 'Format: one letter (A or C) + 7 digits, e.g. A1234567';
+    } else {
+      err.textContent = '';
+    }
+  });
+
+  document.querySelectorAll('#resultPills .pill').forEach(function(p){
+    p.addEventListener('click', function(){
+      selectedResult = p.dataset.r;
+      document.querySelectorAll('#resultPills .pill').forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+    });
+  });
+
+  /* ---------------- Entry form ---------------- */
+  function resetEntryForm(){
+    editingId = null;
+    document.getElementById('entryPanelTitle').textContent = 'Log a Checkride';
+    document.getElementById('saveEntryBtn').textContent = 'Save Entry';
+    document.getElementById('cancelEditBtn').classList.add('hidden');
+    document.getElementById('entryForm').reset();
+    document.getElementById('f_date').value = todayStr();
+    var now = new Date();
+    document.getElementById('f_time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    selectedResult = null;
+    document.querySelectorAll('#resultPills .pill').forEach(function(x){ x.classList.remove('active'); });
+    document.getElementById('ftnError').textContent = '';
+    document.getElementById('f_continuation').checked = false;
+  }
+
+  document.getElementById('cancelEditBtn').addEventListener('click', resetEntryForm);
+
+  document.getElementById('entryForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var ftnVal = document.getElementById('f_ftn').value.trim().toUpperCase();
+    if (!FTN_PATTERN.test(ftnVal)){
+      document.getElementById('ftnError').textContent = 'Format: one letter (A or C) + 7 digits, e.g. A1234567';
+      document.getElementById('f_ftn').focus();
+      return;
+    }
+    if (!selectedResult){
+      alert('Please select a result (Pass / Fail / Discontinued / Retest).');
+      return;
+    }
+    var entry = {
+      id: editingId || uid(),
+      date: document.getElementById('f_date').value,
+      time: document.getElementById('f_time').value,
+      applicant: document.getElementById('f_applicant').value.trim(),
+      ftn: ftnVal,
+      school: document.getElementById('f_school').value,
+      testType: document.getElementById('f_testtype').value,
+      result: selectedResult,
+      amount: parseFloat(document.getElementById('f_amount').value) || 0,
+      paymentType: document.getElementById('f_payment').value,
+      continuation: document.getElementById('f_continuation').checked
+    };
+    if (editingId){
+      var idx = state.entries.findIndex(function(x){ return x.id===editingId; });
+      if (idx !== -1) state.entries[idx] = entry;
+    } else {
+      state.entries.push(entry);
+    }
+    saveVault().then(function(){
+      resetEntryForm();
+      renderLog();
+      renderStats();
+      tabButtons.forEach(function(b){ b.classList.remove('active'); });
+      document.querySelector('.tab-btn[data-tab="log"]').classList.add('active');
+      document.getElementById('tab-entry').classList.add('hidden');
+      document.getElementById('tab-log').classList.remove('hidden');
+    });
+  });
+
+  function editEntry(id){
+    var e = state.entries.find(function(x){ return x.id===id; });
+    if (!e) return;
+    editingId = id;
+    document.getElementById('entryPanelTitle').textContent = 'Edit Checkride';
+    document.getElementById('saveEntryBtn').textContent = 'Update Entry';
+    document.getElementById('cancelEditBtn').classList.remove('hidden');
+    document.getElementById('f_date').value = e.date;
+    document.getElementById('f_time').value = e.time || '';
+    document.getElementById('f_applicant').value = e.applicant;
+    document.getElementById('f_ftn').value = e.ftn || '';
+    document.getElementById('ftnError').textContent = '';
+    document.getElementById('f_school').value = e.school;
+    document.getElementById('f_testtype').value = e.testType;
+    document.getElementById('f_amount').value = e.amount;
+    document.getElementById('f_payment').value = e.paymentType;
+    document.getElementById('f_continuation').checked = !!e.continuation;
+    selectedResult = e.result;
+    document.querySelectorAll('#resultPills .pill').forEach(function(x){ x.classList.toggle('active', x.dataset.r===e.result); });
+
+    tabButtons.forEach(function(b){ b.classList.remove('active'); });
+    document.querySelector('.tab-btn[data-tab="entry"]').classList.add('active');
+    document.getElementById('tab-log').classList.add('hidden');
+    document.getElementById('tab-stats').classList.add('hidden');
+    document.getElementById('tab-entry').classList.remove('hidden');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function deleteEntry(id){
+    openConfirmModal('Delete Entry', 'This will permanently remove this entry. This can\'t be undone.', function(){
+      state.entries = state.entries.filter(function(x){ return x.id!==id; });
+      saveVault().then(function(){ renderLog(); renderStats(); });
+    });
+  }
+
+  /* ---------------- Log rendering ---------------- */
+  ['filterSearch','filterSchool','filterTestType','filterFrom','filterTo'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      filters.search = document.getElementById('filterSearch').value.trim().toLowerCase();
+      filters.school = document.getElementById('filterSchool').value;
+      filters.testType = document.getElementById('filterTestType').value;
+      filters.from = document.getElementById('filterFrom').value;
+      filters.to = document.getElementById('filterTo').value;
+      renderLog();
+    });
+  });
+  document.getElementById('clearFiltersBtn').addEventListener('click', function(){
+    filters = { search:'', school:'', testType:'', from:'', to:'' };
+    document.getElementById('filterSearch').value='';
+    document.getElementById('filterSchool').value='';
+    document.getElementById('filterTestType').value='';
+    document.getElementById('filterFrom').value='';
+    document.getElementById('filterTo').value='';
+    renderLog();
+  });
+
+  function resultBadgeClass(r){
+    if (r==='Pass') return 'badge-pass';
+    if (r==='Fail') return 'badge-fail';
+    return 'badge-other';
+  }
+
+  function copyFtnChip(chip){
+    var text = chip.dataset.ftn;
+    if (!text) return;
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(chip);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch(e){}
+
+    function flash(ok){
+      chip.classList.add('copied');
+      var prevAfter = chip.title;
+      chip.title = ok ? 'Copied!' : 'Selected \u2014 press Cmd/Ctrl+C';
+      setTimeout(function(){ chip.classList.remove('copied'); chip.title = prevAfter; }, 1100);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ flash(true); }).catch(function(){
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch(e){}
+        flash(ok);
+      });
+    } else {
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch(e){}
+      flash(ok);
+    }
+  }
+
+  function renderLog(){
+    var list = document.getElementById('logList');
+    var items = state.entries.filter(function(e){
+      if (filters.search && e.applicant.toLowerCase().indexOf(filters.search)===-1 && (e.ftn||'').toLowerCase().indexOf(filters.search)===-1) return false;
+      if (filters.school && e.school !== filters.school) return false;
+      if (filters.testType && e.testType !== filters.testType) return false;
+      if (filters.from && e.date < filters.from) return false;
+      if (filters.to && e.date > filters.to) return false;
+      return true;
+    }).sort(function(a,b){
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return (a.time||'') < (b.time||'') ? 1 : -1;
+    });
+
+    if (items.length === 0){
+      list.innerHTML = '<div class="empty-state">No entries match. Log a checkride to get started.</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(function(e){
+      return (
+        '<div class="card entry-card fade-in">' +
+          '<div class="entry-main">' +
+            '<div class="entry-top">' +
+              '<span class="badge ' + resultBadgeClass(e.result) + '">' + e.result.toUpperCase() + '</span>' +
+              '<span class="entry-name">' + escapeHtml(e.applicant) + '</span>' +
+              '<span class="ftn-chip" data-ftn="' + escapeHtml(e.ftn||'') + '" title="Click to copy FTN">' + escapeHtml(e.ftn||'') + '</span>' +
+            '</div>' +
+            '<div class="entry-sub">' + e.date + (e.time ? ' · ' + e.time : '') + ' · ' + escapeHtml(e.school) + ' · ' + escapeHtml(e.testType) + '</div>' +
+            '<div class="entry-sub">' + escapeHtml(e.paymentType) + '</div>' +
+          '</div>' +
+          '<div class="entry-actions">' +
+            '<div class="entry-amt">' + fmtMoney(e.amount) + '</div>' +
+            '<button data-edit="' + e.id + '" title="Edit">✎</button>' +
+            '<button data-del="' + e.id + '" title="Delete">✕</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    list.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ editEntry(b.dataset.edit); }); });
+    list.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ deleteEntry(b.dataset.del); }); });
+    list.querySelectorAll('.ftn-chip').forEach(function(chip){
+      chip.addEventListener('click', function(){ copyFtnChip(chip); });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ---------------- Stats ---------------- */
+  function startOfWeek(d){ var x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; }
+  function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function startOfQuarter(d){ var q = Math.floor(d.getMonth()/3); return new Date(d.getFullYear(), q*3, 1); }
+  function startOfYear(d){ return new Date(d.getFullYear(), 0, 1); }
+
+  function entryDateObj(e){ return new Date(e.date + 'T00:00:00'); }
+
+  function filterByPeriod(entries, period){
+    if (period === 'all') return entries;
+    var today = new Date();
+    var start;
+    if (period==='week') start = startOfWeek(today);
+    else if (period==='month') start = startOfMonth(today);
+    else if (period==='quarter') start = startOfQuarter(today);
+    else if (period==='year') start = startOfYear(today);
+    return entries.filter(function(e){ return entryDateObj(e) >= start; });
+  }
+
+  function moneySum(entries){
+    return entries.reduce(function(sum,e){ return sum + (e.amount||0); }, 0);
+  }
+
+  function passFailStats(entries){
+    var pass = entries.filter(function(e){ return e.result==='Pass'; }).length;
+    var fail = entries.filter(function(e){ return e.result==='Fail'; }).length;
+    var denom = pass + fail;
+    return { pass:pass, fail:fail, rate: denom ? (pass/denom*100) : null };
+  }
+
+  function renderMoneyStats(){
+    var today = state.entries.filter(function(e){ return e.date === todayStr(); });
+    var wk = filterByPeriod(state.entries, 'week');
+    var mo = filterByPeriod(state.entries, 'month');
+    var qt = filterByPeriod(state.entries, 'quarter');
+    var yr = filterByPeriod(state.entries, 'year');
+    var all = state.entries;
+    var cards = [
+      ['Today', moneySum(today)],
+      ['This Week', moneySum(wk)],
+      ['This Month', moneySum(mo)],
+      ['This Quarter', moneySum(qt)],
+      ['This Year', moneySum(yr)],
+      ['All Time', moneySum(all)]
+    ];
+    document.getElementById('moneyStats').innerHTML = cards.map(function(c){
+      return '<div class="card stat-card"><div class="stat-label">'+c[0]+'</div><div class="stat-value">'+fmtMoney(c[1])+'</div></div>';
+    }).join('');
+  }
+
+  function renderContinuationStats(){
+    var mo = filterByPeriod(state.entries, 'month').filter(function(e){ return !!e.continuation; }).length;
+    var yr = filterByPeriod(state.entries, 'year').filter(function(e){ return !!e.continuation; }).length;
+    var cards = [['This Month', mo], ['This Year', yr]];
+    document.getElementById('continuationStats').innerHTML = cards.map(function(c){
+      return '<div class="card stat-card"><div class="stat-label">'+c[0]+'</div><div class="stat-value">'+c[1]+'</div></div>';
+    }).join('');
+  }
+
+  function drawDial(pass, fail){
+    var canvas = document.getElementById('dialCanvas');
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width, h = canvas.height;
+    var cx = w/2, cy = h/2, rOuter = 96, rInner = 62;
+    ctx.clearRect(0,0,w,h);
+
+    // bezel
+    ctx.beginPath(); ctx.arc(cx,cy,rOuter+8,0,Math.PI*2);
+    ctx.fillStyle = '#161E29'; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = '#2B3648'; ctx.stroke();
+
+    var total = pass + fail;
+    var passFrac = total ? pass/total : 0;
+    var startAngle = -Math.PI/2;
+
+    if (total === 0){
+      ctx.beginPath(); ctx.arc(cx,cy,rOuter,0,Math.PI*2);
+      ctx.fillStyle = '#212B3A'; ctx.fill();
+    } else {
+      var passAngle = startAngle + passFrac*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,rOuter,startAngle,passAngle); ctx.closePath();
+      ctx.fillStyle = '#3FA34D'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,rOuter,passAngle,startAngle+Math.PI*2); ctx.closePath();
+      ctx.fillStyle = '#D64545'; ctx.fill();
+    }
+
+    // donut hole
+    ctx.beginPath(); ctx.arc(cx,cy,rInner,0,Math.PI*2);
+    ctx.fillStyle = '#1D2735'; ctx.fill();
+
+    // tick marks
+    ctx.strokeStyle = '#F0A202'; ctx.lineWidth = 2;
+    for (var i=0;i<20;i++){
+      var a = -Math.PI/2 + i*(Math.PI*2/20);
+      var x1 = cx + Math.cos(a)*(rOuter+8), y1 = cy + Math.sin(a)*(rOuter+8);
+      var x2 = cx + Math.cos(a)*(rOuter+13), y2 = cy + Math.sin(a)*(rOuter+13);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+
+    ctx.fillStyle = '#E7ECF3';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '600 26px "IBM Plex Mono", monospace';
+    var label = total ? Math.round(passFrac*100) + '%' : '—';
+    ctx.fillText(label, cx, cy-6);
+    ctx.font = '400 10px "IBM Plex Mono", monospace';
+    ctx.fillStyle = '#8FA0B8';
+    ctx.fillText('PASS RATE', cx, cy+16);
+  }
+
+  function renderPie(){
+    var entries = filterByPeriod(state.entries, pieePeriod);
+    var s = passFailStats(entries);
+    drawDial(s.pass, s.fail);
+    document.getElementById('dialPassCount').textContent = s.pass + ' Pass';
+    document.getElementById('dialFailCount').textContent = s.fail + ' Fail';
+  }
+
+  document.querySelectorAll('#pieSeg button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('#pieSeg button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      pieePeriod = btn.dataset.period;
+      renderPie();
+    });
+  });
+
+  function breakdownTableHtml(headerLabel, rows){
+    var periods = [['week','This Wk'],['month','This Mo'],['year','This Yr'],['all','All Time']];
+    var html = '<thead><tr><th>' + headerLabel + '</th>';
+    periods.forEach(function(p){ html += '<th>'+p[1]+'</th>'; });
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(function(row){
+      html += '<tr><td class="rowlabel">' + escapeHtml(row.label) + '</td>';
+      periods.forEach(function(p){
+        var subset = filterByPeriod(state.entries, p[0]).filter(row.filterFn);
+        var s = passFailStats(subset);
+        if (s.rate === null){
+          html += '<td class="no-data">—</td>';
+        } else {
+          html += '<td><div class="rate-cell"><span>' + Math.round(s.rate) + '% (' + s.pass + '/' + (s.pass+s.fail) + ')</span>' +
+            '<div class="rate-bar"><div class="rate-bar-fill" style="width:' + s.rate + '%"></div></div></div></td>';
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    return html;
+  }
+
+  function renderBreakdown(){
+    var testRows = [{ label:'All Tests', filterFn: function(e){ return true; } }]
+      .concat(state.lists.testTypes.map(function(tt){
+        return { label: tt, filterFn: function(e){ return e.testType === tt; } };
+      }));
+    document.getElementById('breakdownTable').innerHTML = breakdownTableHtml('Test Type', testRows);
+
+    var schoolRows = [{ label:'All Schools', filterFn: function(e){ return true; } }]
+      .concat(state.lists.schools.map(function(sc){
+        return { label: sc, filterFn: function(e){ return e.school === sc; } };
+      }));
+    document.getElementById('breakdownBySchool').innerHTML = breakdownTableHtml('School', schoolRows);
+  }
+
+  function renderStats(){
+    renderMoneyStats();
+    renderContinuationStats();
+    renderPie();
+    renderBreakdown();
+  }
+
+  /* ---------------- Export / Import / Change pass ---------------- */
+  document.getElementById('exportBtn').addEventListener('click', openExportModal);
+  document.getElementById('changePassBtn').addEventListener('click', openChangePassModal);
+  document.getElementById('importBtn').addEventListener('click', function(){
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch(err){ alert('That file is not a valid backup.'); return; }
+      if (!parsed.salt || !parsed.iv || !parsed.data){ alert('That file is not a valid backup.'); return; }
+      openConfirmModal('Import Backup', 'This replaces all current data with the contents of the backup file. This can\'t be undone. Continue?', function(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        currentPassphrase = null;
+        state = null;
+        appEl.classList.add('hidden');
+        showLock();
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  /* ---------------- Boot ---------------- */
+  showLock();
+
+})();
+</script>
+</body>
+</html>
