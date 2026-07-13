@@ -181,6 +181,11 @@
   .badge-pass{ background:var(--green-dim); color:var(--green); }
   .badge-fail{ background:var(--red-dim); color:var(--red); }
   .badge-other{ background:var(--amber-glow); color:var(--amber); }
+  .badge-pending{ background:rgba(240,162,2,0.10); color:var(--amber); border:1px solid var(--amber-dim); }
+  @media (prefers-reduced-motion: no-preference){
+    .badge-pending{ animation:pendingPulse 1.8s ease-in-out infinite; }
+  }
+  @keyframes pendingPulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
   .entry-name{ font-weight:600; font-size:14.5px; }
   .entry-sub{ color:var(--text-dim); font-size:12.5px; font-family:var(--mono); }
   .ftn-chip{
@@ -356,6 +361,7 @@
             <div class="pill" data-r="Discontinued">DISC.</div>
             <div class="pill" data-r="Retest">RETEST</div>
           </div>
+          <div style="color:var(--text-faint); font-family:var(--mono); font-size:10.5px; margin-top:7px;">Leave blank to save now and enter the outcome after the test.</div>
         </div>
 
         <div class="field">
@@ -368,12 +374,12 @@
         <div class="field-row">
           <div class="field">
             <label for="f_amount">Amount Paid</label>
-            <input type="number" id="f_amount" min="0" step="0.01" placeholder="0.00" required>
+            <input type="number" id="f_amount" min="0" step="0.01" placeholder="0.00">
           </div>
           <div class="field">
             <label for="f_payment">Form of Payment</label>
             <div class="select-row">
-              <select id="f_payment" required></select>
+              <select id="f_payment"></select>
               <button type="button" class="add-btn" data-addlist="paymentTypes" title="Add payment type">+</button>
             </div>
           </div>
@@ -393,6 +399,14 @@
         <input type="text" id="filterSearch" placeholder="Search applicant name or FTN…">
         <select id="filterSchool"><option value="">All Schools</option></select>
         <select id="filterTestType"><option value="">All Test Types</option></select>
+        <select id="filterResult">
+          <option value="">All Results</option>
+          <option value="Pending">Pending</option>
+          <option value="Pass">Pass</option>
+          <option value="Fail">Fail</option>
+          <option value="Discontinued">Discontinued</option>
+          <option value="Retest">Retest</option>
+        </select>
         <div style="display:flex; gap:8px;">
           <input type="date" id="filterFrom" title="From date">
           <input type="date" id="filterTo" title="To date">
@@ -476,7 +490,7 @@
   var editingId = null;
   var selectedResult = null;
   var pieePeriod = 'all';
-  var filters = { search:'', school:'', testType:'', from:'', to:'' };
+  var filters = { search:'', school:'', testType:'', result:'', from:'', to:'' };
 
   /* ---------------- Utility ---------------- */
   function uid(){
@@ -717,11 +731,11 @@
   function renderAllSelectLists(){
     fillSelect(document.getElementById('f_school'), state.lists.schools);
     fillSelect(document.getElementById('f_testtype'), state.lists.testTypes);
-    fillSelect(document.getElementById('f_payment'), state.lists.paymentTypes);
+    fillSelect(document.getElementById('f_payment'), state.lists.paymentTypes, false, null, true);
     fillSelect(document.getElementById('filterSchool'), state.lists.schools, true, 'All Schools');
     fillSelect(document.getElementById('filterTestType'), state.lists.testTypes, true, 'All Test Types');
   }
-  function fillSelect(sel, items, withAll, allLabel){
+  function fillSelect(sel, items, withAll, allLabel, withBlank){
     var current = sel.value;
     sel.innerHTML = '';
     if (withAll){
@@ -729,12 +743,17 @@
       optAll.value = ''; optAll.textContent = allLabel;
       sel.appendChild(optAll);
     }
+    if (withBlank){
+      var optBlank = document.createElement('option');
+      optBlank.value = ''; optBlank.textContent = '\u2014 Fill in after test \u2014';
+      sel.appendChild(optBlank);
+    }
     items.forEach(function(item){
       var opt = document.createElement('option');
       opt.value = item; opt.textContent = item;
       sel.appendChild(opt);
     });
-    if (items.indexOf(current) !== -1 || (withAll && current==='')) sel.value = current;
+    if (items.indexOf(current) !== -1 || ((withAll||withBlank) && current==='')) sel.value = current;
   }
 
   document.querySelectorAll('[data-addlist]').forEach(function(btn){
@@ -792,10 +811,6 @@
       document.getElementById('f_ftn').focus();
       return;
     }
-    if (!selectedResult){
-      alert('Please select a result (Pass / Fail / Discontinued / Retest).');
-      return;
-    }
     var entry = {
       id: editingId || uid(),
       date: document.getElementById('f_date').value,
@@ -804,7 +819,7 @@
       ftn: ftnVal,
       school: document.getElementById('f_school').value,
       testType: document.getElementById('f_testtype').value,
-      result: selectedResult,
+      result: selectedResult || 'Pending',
       amount: parseFloat(document.getElementById('f_amount').value) || 0,
       paymentType: document.getElementById('f_payment').value,
       continuation: document.getElementById('f_continuation').checked
@@ -862,10 +877,11 @@
   }
 
   /* ---------------- Log rendering ---------------- */
-  ['filterSearch','filterSchool','filterTestType','filterFrom','filterTo'].forEach(function(id){
+  ['filterSearch','filterSchool','filterTestType','filterResult','filterFrom','filterTo'].forEach(function(id){
     document.getElementById(id).addEventListener('input', function(){
       filters.search = document.getElementById('filterSearch').value.trim().toLowerCase();
       filters.school = document.getElementById('filterSchool').value;
+      filters.result = document.getElementById('filterResult').value;
       filters.testType = document.getElementById('filterTestType').value;
       filters.from = document.getElementById('filterFrom').value;
       filters.to = document.getElementById('filterTo').value;
@@ -873,9 +889,10 @@
     });
   });
   document.getElementById('clearFiltersBtn').addEventListener('click', function(){
-    filters = { search:'', school:'', testType:'', from:'', to:'' };
+    filters = { search:'', school:'', testType:'', result:'', from:'', to:'' };
     document.getElementById('filterSearch').value='';
     document.getElementById('filterSchool').value='';
+    document.getElementById('filterResult').value='';
     document.getElementById('filterTestType').value='';
     document.getElementById('filterFrom').value='';
     document.getElementById('filterTo').value='';
@@ -885,6 +902,7 @@
   function resultBadgeClass(r){
     if (r==='Pass') return 'badge-pass';
     if (r==='Fail') return 'badge-fail';
+    if (r==='Pending' || !r) return 'badge-pending';
     return 'badge-other';
   }
 
@@ -925,10 +943,14 @@
       if (filters.search && e.applicant.toLowerCase().indexOf(filters.search)===-1 && (e.ftn||'').toLowerCase().indexOf(filters.search)===-1) return false;
       if (filters.school && e.school !== filters.school) return false;
       if (filters.testType && e.testType !== filters.testType) return false;
+      if (filters.result && e.result !== filters.result) return false;
       if (filters.from && e.date < filters.from) return false;
       if (filters.to && e.date > filters.to) return false;
       return true;
     }).sort(function(a,b){
+      var aPending = (a.result === 'Pending') ? 1 : 0;
+      var bPending = (b.result === 'Pending') ? 1 : 0;
+      if (aPending !== bPending) return bPending - aPending;
       if (a.date !== b.date) return a.date < b.date ? 1 : -1;
       return (a.time||'') < (b.time||'') ? 1 : -1;
     });
