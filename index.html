@@ -162,6 +162,7 @@
   .pill[data-r="Pass"].active{ background:var(--green-dim); border-color:var(--green); color:var(--green); }
   .pill[data-r="Fail"].active{ background:var(--red-dim); border-color:var(--red); color:var(--red); }
   .pill[data-r="Discontinued"].active, .pill[data-r="Retest"].active{ background:var(--amber-glow); border-color:var(--amber-dim); color:var(--amber); }
+  .pill[data-sex].active{ background:var(--amber-glow); border-color:var(--amber-dim); color:var(--amber); }
 
   /* ---------- Lock screen ---------- */
   .lock-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -338,6 +339,15 @@
         </div>
 
         <div class="field">
+          <label>Sex</label>
+          <div class="result-pills" id="sexPills">
+            <div class="pill" data-sex="Male">MALE</div>
+            <div class="pill" data-sex="Female">FEMALE</div>
+          </div>
+          <div class="error-text" id="sexError" style="min-height:14px; margin-top:4px;"></div>
+        </div>
+
+        <div class="field">
           <label for="f_school">School</label>
           <div class="select-row">
             <select id="f_school" required></select>
@@ -430,6 +440,7 @@
       <div class="seg" id="pieSeg">
         <button data-period="week">This Week</button>
         <button data-period="month">This Month</button>
+        <button data-period="quarter">This Quarter</button>
         <button data-period="year">This Year</button>
         <button data-period="all" class="active">All Time</button>
       </div>
@@ -449,6 +460,11 @@
       <div class="panel-title" style="margin-top:26px;">Breakdown by School</div>
       <div class="table-scroll">
         <table class="breakdown" id="breakdownBySchool"></table>
+      </div>
+
+      <div class="panel-title" style="margin-top:26px;">Breakdown by Sex</div>
+      <div class="table-scroll">
+        <table class="breakdown" id="breakdownBySex"></table>
       </div>
     </section>
 
@@ -489,6 +505,7 @@
   var state = null; // { entries: [], lists: {schools,testTypes,paymentTypes} }
   var editingId = null;
   var selectedResult = null;
+  var selectedSex = null;
   var pieePeriod = 'all';
   var filters = { search:'', school:'', testType:'', result:'', from:'', to:'' };
 
@@ -785,6 +802,15 @@
     });
   });
 
+  document.querySelectorAll('#sexPills .pill').forEach(function(p){
+    p.addEventListener('click', function(){
+      selectedSex = p.dataset.sex;
+      document.querySelectorAll('#sexPills .pill').forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      document.getElementById('sexError').textContent = '';
+    });
+  });
+
   /* ---------------- Entry form ---------------- */
   function resetEntryForm(){
     editingId = null;
@@ -799,6 +825,9 @@
     document.querySelectorAll('#resultPills .pill').forEach(function(x){ x.classList.remove('active'); });
     document.getElementById('ftnError').textContent = '';
     document.getElementById('f_continuation').checked = false;
+    selectedSex = null;
+    document.querySelectorAll('#sexPills .pill').forEach(function(x){ x.classList.remove('active'); });
+    document.getElementById('sexError').textContent = '';
   }
 
   document.getElementById('cancelEditBtn').addEventListener('click', resetEntryForm);
@@ -811,12 +840,17 @@
       document.getElementById('f_ftn').focus();
       return;
     }
+    if (!selectedSex){
+      document.getElementById('sexError').textContent = 'Please select Male or Female.';
+      return;
+    }
     var entry = {
       id: editingId || uid(),
       date: document.getElementById('f_date').value,
       time: document.getElementById('f_time').value,
       applicant: document.getElementById('f_applicant').value.trim(),
       ftn: ftnVal,
+      sex: selectedSex,
       school: document.getElementById('f_school').value,
       testType: document.getElementById('f_testtype').value,
       result: selectedResult || 'Pending',
@@ -853,6 +887,9 @@
     document.getElementById('f_applicant').value = e.applicant;
     document.getElementById('f_ftn').value = e.ftn || '';
     document.getElementById('ftnError').textContent = '';
+    selectedSex = e.sex || null;
+    document.querySelectorAll('#sexPills .pill').forEach(function(x){ x.classList.toggle('active', x.dataset.sex===e.sex); });
+    document.getElementById('sexError').textContent = '';
     document.getElementById('f_school').value = e.school;
     document.getElementById('f_testtype').value = e.testType;
     document.getElementById('f_amount').value = e.amount;
@@ -969,7 +1006,7 @@
               '<span class="entry-name">' + escapeHtml(e.applicant) + '</span>' +
               '<span class="ftn-chip" data-ftn="' + escapeHtml(e.ftn||'') + '" title="Click to copy FTN">' + escapeHtml(e.ftn||'') + '</span>' +
             '</div>' +
-            '<div class="entry-sub">' + e.date + (e.time ? ' · ' + e.time : '') + ' · ' + escapeHtml(e.school) + ' · ' + escapeHtml(e.testType) + '</div>' +
+            '<div class="entry-sub">' + e.date + (e.time ? ' · ' + e.time : '') + ' · ' + escapeHtml(e.school) + ' · ' + escapeHtml(e.testType) + (e.sex ? ' · ' + escapeHtml(e.sex) : '') + '</div>' +
             '<div class="entry-sub">' + escapeHtml(e.paymentType) + '</div>' +
           '</div>' +
           '<div class="entry-actions">' +
@@ -1121,7 +1158,7 @@
   });
 
   function breakdownTableHtml(headerLabel, rows){
-    var periods = [['week','This Wk'],['month','This Mo'],['year','This Yr'],['all','All Time']];
+    var periods = [['week','This Wk'],['month','This Mo'],['quarter','This Qtr'],['year','This Yr'],['all','All Time']];
     var html = '<thead><tr><th>' + headerLabel + '</th>';
     periods.forEach(function(p){ html += '<th>'+p[1]+'</th>'; });
     html += '</tr></thead><tbody>';
@@ -1156,6 +1193,13 @@
         return { label: sc, filterFn: function(e){ return e.school === sc; } };
       }));
     document.getElementById('breakdownBySchool').innerHTML = breakdownTableHtml('School', schoolRows);
+
+    var sexRows = [
+      { label:'All', filterFn: function(e){ return true; } },
+      { label:'Male', filterFn: function(e){ return e.sex === 'Male'; } },
+      { label:'Female', filterFn: function(e){ return e.sex === 'Female'; } }
+    ];
+    document.getElementById('breakdownBySex').innerHTML = breakdownTableHtml('Sex', sexRows);
   }
 
   function renderStats(){
